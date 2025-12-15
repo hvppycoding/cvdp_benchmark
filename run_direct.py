@@ -27,7 +27,6 @@ import os
 import sys
 import subprocess
 import shutil
-from pathlib import Path
 import time
 
 # Default timeout for test execution (can be overridden with -t flag)
@@ -69,6 +68,12 @@ def normalize_dataset_path(path_str, base_dir):
             break
     
     return path_str
+
+def calculate_pass_rate(passed, total):
+    """Calculate pass rate percentage, handling empty dataset case."""
+    if total > 0:
+        return f"{passed/total*100:.1f}%"
+    return "N/A (no tests run)"
 
 def parse_env_file(env_content):
     """Parse .env file content and return a dictionary of environment variables."""
@@ -113,13 +118,15 @@ def extract_test_files(data, base_dir):
     
     return test_id
 
-def run_test_direct(base_dir, test_id, timeout=DEFAULT_TIMEOUT):
+def run_test_direct(base_dir, timeout=DEFAULT_TIMEOUT):
     """Run test directly without Docker using cocotb + pytest.
     
     Args:
         base_dir: Base directory containing extracted test files
-        test_id: Test case identifier
         timeout: Timeout in seconds for test execution (default: 300)
+        
+    Returns:
+        Tuple of (success, log_file, execution_time)
     """
     
     # Parse environment variables from src/.env
@@ -309,7 +316,7 @@ Examples:
         extract_test_files(data, test_dir)
         
         # Run test
-        success, log, execution_time = run_test_direct(test_dir, test_id, timeout=args.timeout)
+        success, log, execution_time = run_test_direct(test_dir, timeout=args.timeout)
         
         # Record result
         results[test_id] = {
@@ -336,10 +343,7 @@ Examples:
         f.write(f"Total Tests: {len(dataset)}\n")
         f.write(f"Passed: {passed}\n")
         f.write(f"Failed: {failed}\n")
-        if len(dataset) > 0:
-            f.write(f"Pass Rate: {passed/len(dataset)*100:.1f}%\n\n")
-        else:
-            f.write("Pass Rate: N/A (no tests run)\n\n")
+        f.write(f"Pass Rate: {calculate_pass_rate(passed, len(dataset))}\n\n")
         
         f.write("=" * 80 + "\n")
         f.write("Individual Results\n")
@@ -359,10 +363,7 @@ Examples:
     print(f"Total Tests: {len(dataset)}")
     print(f"Passed: {passed}")
     print(f"Failed: {failed}")
-    if len(dataset) > 0:
-        print(f"Pass Rate: {passed/len(dataset)*100:.1f}%")
-    else:
-        print("Pass Rate: N/A (no tests run)")
+    print(f"Pass Rate: {calculate_pass_rate(passed, len(dataset))}")
     print()
     print(f"Report saved to: {report_file}")
     print("=" * 80)

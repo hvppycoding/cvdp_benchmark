@@ -6,6 +6,9 @@ without any Docker dependencies.
 
 This is a minimal educational example to demonstrate the core concept.
 For production use, see run_direct.py
+
+Note: The normalize_dataset_path() function is duplicated here for simplicity
+and educational purposes. In production, it would be in a shared utility module.
 """
 
 import json
@@ -17,8 +20,8 @@ def normalize_dataset_path(path_str, base_dir):
     """
     Normalize paths from dataset.jsonl to absolute paths.
     
-    Handles Docker-specific paths used in CVDP datasets.
-    See run_direct.py for full documentation.
+    Note: This is a simplified version for educational purposes.
+    See run_direct.py for the fully documented version.
     """
     docker_patterns = ['/code/', '/src/', '/rundir/']
     
@@ -30,15 +33,22 @@ def normalize_dataset_path(path_str, base_dir):
     
     return path_str
 
-def extract_and_run_example():
-    """Extract first test case and show how to run it."""
+def extract_and_run_example(dataset_file=None):
+    """Extract first test case and show how to run it.
     
-    # Example dataset file
-    dataset_file = 'example_dataset/cvdp_v1.0.1_example_nonagentic_code_generation_no_commercial_with_solutions.jsonl'
+    Args:
+        dataset_file: Optional path to dataset file. If None, uses default example.
+    """
+    
+    # Default example dataset file
+    if dataset_file is None:
+        dataset_file = 'example_dataset/cvdp_v1.0.1_example_nonagentic_code_generation_no_commercial_with_solutions.jsonl'
     
     if not os.path.exists(dataset_file):
         print(f"ERROR: Dataset file not found: {dataset_file}")
         print("Please run this script from the repository root directory.")
+        if dataset_file != sys.argv[1] if len(sys.argv) > 1 else None:
+            print(f"Or provide a valid dataset file path as argument.")
         return 1
     
     print("=" * 80)
@@ -194,4 +204,6 @@ def extract_and_run_example():
         return 0
 
 if __name__ == '__main__':
-    sys.exit(extract_and_run_example())
+    # Allow optional dataset file argument
+    dataset_file = sys.argv[1] if len(sys.argv) > 1 else None
+    sys.exit(extract_and_run_example(dataset_file))
