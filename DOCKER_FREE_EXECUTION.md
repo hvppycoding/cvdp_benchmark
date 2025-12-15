@@ -135,6 +135,21 @@ cat work_direct/report.txt
 
 This document explains how to run CVDP Benchmark with just a dataset.jsonl file without Docker.
 
+#### Execution Flow Comparison
+
+**Traditional Docker-Based Flow:**
+```
+dataset.jsonl → Extract Files → Build Docker Image → 
+Run in Container → Extract Results → Report
+  (slower, requires Docker)
+```
+
+**New Docker-Free Flow:**
+```
+dataset.jsonl → Extract Files → Run Directly → Report
+  (faster, lightweight, no Docker needed)
+```
+
 ### Current Architecture Analysis
 
 #### Docker-Based Execution Flow
@@ -260,6 +275,39 @@ Each entry in dataset.jsonl contains:
 - `input`: Problem prompt and context
 - `output`: Expected RTL/solution files
 - `harness`: Test infrastructure (test files, docker-compose, etc.)
+
+**Example Structure:**
+```json
+{
+  "id": "cvdp_copilot_lfsr_0001",
+  "categories": ["cid003", "easy"],
+  "input": {
+    "prompt": "Design an 8-bit LFSR...",
+    "context": {}
+  },
+  "output": {
+    "response": "",
+    "context": {
+      "rtl/lfsr_8bit.sv": "module lfsr_8bit(...)..."
+    }
+  },
+  "harness": {
+    "files": {
+      "Dockerfile": "FROM __OSS_SIM_IMAGE__...",
+      "docker-compose.yml": "services:...",
+      "src/.env": "SIM=icarus\nTOPLEVEL=lfsr_8bit...",
+      "src/test_lfsr.py": "import cocotb...",
+      "src/test_runner.py": "from cocotb.runner..."
+    }
+  }
+}
+```
+
+**What gets extracted:**
+- **rtl/** - RTL design files from `output.context`
+- **src/** - Test files and configuration from `harness.files`
+- **Environment** - Test settings from `src/.env`
+- **Tests** - cocotb test files (Python)
 
 ### Technical Details
 
