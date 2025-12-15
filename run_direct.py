@@ -277,8 +277,22 @@ Examples:
         print(f"ERROR: File not found: {args.file}")
         return 1
     
-    with open(args.file, 'r') as f:
-        dataset = [json.loads(line) for line in f if line.strip()]
+    try:
+        with open(args.file, 'r') as f:
+            dataset = []
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    dataset.append(json.loads(line))
+                except json.JSONDecodeError as e:
+                    print(f"ERROR: Invalid JSON at line {line_num}: {e}")
+                    print(f"  Line content: {line[:100]}...")
+                    return 1
+    except Exception as e:
+        print(f"ERROR: Failed to read dataset file: {e}")
+        return 1
     
     print(f"  Found {len(dataset)} test cases")
     print()

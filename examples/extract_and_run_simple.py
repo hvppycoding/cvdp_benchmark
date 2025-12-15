@@ -47,8 +47,7 @@ def extract_and_run_example(dataset_file=None):
     if not os.path.exists(dataset_file):
         print(f"ERROR: Dataset file not found: {dataset_file}")
         print("Please run this script from the repository root directory.")
-        if dataset_file != sys.argv[1] if len(sys.argv) > 1 else None:
-            print(f"Or provide a valid dataset file path as argument.")
+        print("Or provide a valid dataset file path as argument.")
         return 1
     
     print("=" * 80)
@@ -58,8 +57,15 @@ def extract_and_run_example(dataset_file=None):
     
     # Read first test case
     print("Step 1: Reading dataset.jsonl...")
-    with open(dataset_file, 'r') as f:
-        data = json.loads(f.readline())
+    try:
+        with open(dataset_file, 'r') as f:
+            data = json.loads(f.readline())
+    except json.JSONDecodeError as e:
+        print(f"ERROR: Invalid JSON in dataset file: {e}")
+        return 1
+    except Exception as e:
+        print(f"ERROR: Failed to read dataset file: {e}")
+        return 1
     
     test_id = data['id']
     print(f"  Test ID: {test_id}")
