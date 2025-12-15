@@ -17,14 +17,15 @@ def normalize_dataset_path(path_str, base_dir):
     """
     Normalize paths from dataset.jsonl to absolute paths.
     
-    Handles Docker-specific paths like '/code/' and converts them
-    to absolute paths based on the extraction directory.
+    Handles Docker-specific paths used in CVDP datasets.
+    See run_direct.py for full documentation.
     """
     docker_patterns = ['/code/', '/src/', '/rundir/']
     
     for pattern in docker_patterns:
-        if pattern in path_str:
-            path_str = path_str.replace(pattern, f'{os.path.abspath(base_dir)}/')
+        if path_str.startswith(pattern):
+            # Only replace first occurrence
+            path_str = path_str.replace(pattern, f'{os.path.abspath(base_dir)}/', 1)
             break
     
     return path_str
@@ -141,9 +142,8 @@ def extract_and_run_example():
                     key = key.strip()
                     value = value.strip()
                     
-                    # Use the utility function for path normalization
-                    if '/' in value and 'code' in value:
-                        value = normalize_dataset_path(value, base_dir)
+                    # Normalize Docker paths using the utility function
+                    value = normalize_dataset_path(value, base_dir)
                     
                     env[key] = value
         

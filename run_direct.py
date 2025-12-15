@@ -37,8 +37,17 @@ def normalize_dataset_path(path_str, base_dir):
     """
     Normalize paths from dataset.jsonl to absolute paths.
     
-    Handles Docker-specific paths like '/code/' and converts them
+    Handles Docker-specific paths used in CVDP datasets and converts them
     to absolute paths based on the extraction directory.
+    
+    CVDP Docker Path Conventions:
+    - /code/ : Main working directory in Docker containers
+    - /src/  : Source files directory  
+    - /rundir/ : Test execution directory
+    
+    These paths are used in dataset.jsonl files to specify locations
+    within the Docker container, and need to be converted to actual
+    filesystem paths for direct execution.
     
     Args:
         path_str: Path string that may contain Docker-specific prefixes
@@ -47,13 +56,16 @@ def normalize_dataset_path(path_str, base_dir):
     Returns:
         Normalized absolute path
     """
-    # Common Docker path patterns to replace
+    # Docker path patterns used in CVDP datasets
+    # These patterns appear at the start of path strings in .env files
     docker_patterns = ['/code/', '/src/', '/rundir/']
     
     for pattern in docker_patterns:
-        if pattern in path_str:
-            # Replace Docker path with actual base directory
-            path_str = path_str.replace(pattern, f'{os.path.abspath(base_dir)}/')
+        if path_str.startswith(pattern):
+            # Replace Docker path prefix with actual base directory
+            # Only replace the first occurrence to avoid issues with paths
+            # that might contain the pattern multiple times
+            path_str = path_str.replace(pattern, f'{os.path.abspath(base_dir)}/', 1)
             break
     
     return path_str
@@ -324,7 +336,10 @@ Examples:
         f.write(f"Total Tests: {len(dataset)}\n")
         f.write(f"Passed: {passed}\n")
         f.write(f"Failed: {failed}\n")
-        f.write(f"Pass Rate: {passed/len(dataset)*100:.1f}%\n\n")
+        if len(dataset) > 0:
+            f.write(f"Pass Rate: {passed/len(dataset)*100:.1f}%\n\n")
+        else:
+            f.write("Pass Rate: N/A (no tests run)\n\n")
         
         f.write("=" * 80 + "\n")
         f.write("Individual Results\n")
@@ -344,7 +359,10 @@ Examples:
     print(f"Total Tests: {len(dataset)}")
     print(f"Passed: {passed}")
     print(f"Failed: {failed}")
-    print(f"Pass Rate: {passed/len(dataset)*100:.1f}%")
+    if len(dataset) > 0:
+        print(f"Pass Rate: {passed/len(dataset)*100:.1f}%")
+    else:
+        print("Pass Rate: N/A (no tests run)")
     print()
     print(f"Report saved to: {report_file}")
     print("=" * 80)
