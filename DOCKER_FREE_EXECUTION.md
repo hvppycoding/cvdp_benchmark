@@ -37,6 +37,7 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # 의존성 설치
 pip install -r requirements.txt
+pip install -r requirements-direct.txt  # cocotb, pytest 등 추가 패키지
 
 # Verilog 시뮬레이터 설치 (하나 선택)
 # - Icarus Verilog (오픈소스)
@@ -178,6 +179,7 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
+pip install -r requirements-direct.txt  # cocotb, pytest, and related packages
 
 # Install Verilog simulator (choose one)
 # - Icarus Verilog (open source)

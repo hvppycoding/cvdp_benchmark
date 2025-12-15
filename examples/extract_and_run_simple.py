@@ -13,6 +13,22 @@ import os
 import subprocess
 import sys
 
+def normalize_dataset_path(path_str, base_dir):
+    """
+    Normalize paths from dataset.jsonl to absolute paths.
+    
+    Handles Docker-specific paths like '/code/' and converts them
+    to absolute paths based on the extraction directory.
+    """
+    docker_patterns = ['/code/', '/src/', '/rundir/']
+    
+    for pattern in docker_patterns:
+        if pattern in path_str:
+            path_str = path_str.replace(pattern, f'{os.path.abspath(base_dir)}/')
+            break
+    
+    return path_str
+
 def extract_and_run_example():
     """Extract first test case and show how to run it."""
     
@@ -125,9 +141,9 @@ def extract_and_run_example():
                     key = key.strip()
                     value = value.strip()
                     
-                    # Convert /code/ paths to absolute paths
-                    if '/code/' in value:
-                        value = value.replace('/code/', f'{os.path.abspath(base_dir)}/')
+                    # Use the utility function for path normalization
+                    if '/' in value and 'code' in value:
+                        value = normalize_dataset_path(value, base_dir)
                     
                     env[key] = value
         

@@ -1,0 +1,9 @@
+# Additional Python Requirements for Docker-Free Execution
+# Install these in addition to the main requirements.txt
+
+# Testing framework
+pytest>=7.0.0
+
+# Hardware verification framework
+cocotb>=1.8.0
+cocotb-bus>=0.2.1

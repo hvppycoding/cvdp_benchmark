@@ -30,6 +30,34 @@ import shutil
 from pathlib import Path
 import time
 
+# Default timeout for test execution (can be overridden with -t flag)
+DEFAULT_TIMEOUT = 300  # 5 minutes
+
+def normalize_dataset_path(path_str, base_dir):
+    """
+    Normalize paths from dataset.jsonl to absolute paths.
+    
+    Handles Docker-specific paths like '/code/' and converts them
+    to absolute paths based on the extraction directory.
+    
+    Args:
+        path_str: Path string that may contain Docker-specific prefixes
+        base_dir: Base directory where files are extracted
+        
+    Returns:
+        Normalized absolute path
+    """
+    # Common Docker path patterns to replace
+    docker_patterns = ['/code/', '/src/', '/rundir/']
+    
+    for pattern in docker_patterns:
+        if pattern in path_str:
+            # Replace Docker path with actual base directory
+            path_str = path_str.replace(pattern, f'{os.path.abspath(base_dir)}/')
+            break
+    
+    return path_str
+
 def parse_env_file(env_content):
     """Parse .env file content and return a dictionary of environment variables."""
     env_vars = {}
@@ -73,8 +101,14 @@ def extract_test_files(data, base_dir):
     
     return test_id
 
-def run_test_direct(base_dir, test_id):
-    """Run test directly without Docker using cocotb + pytest."""
+def run_test_direct(base_dir, test_id, timeout=DEFAULT_TIMEOUT):
+    """Run test directly without Docker using cocotb + pytest.
+    
+    Args:
+        base_dir: Base directory containing extracted test files
+        test_id: Test case identifier
+        timeout: Timeout in seconds for test execution (default: 300)
+    """
     
     # Parse environment variables from src/.env
     env_file = os.path.join(base_dir, 'src', '.env')
@@ -97,8 +131,8 @@ def run_test_direct(base_dir, test_id):
     # Convert relative paths to absolute paths
     verilog_sources = env_vars.get('VERILOG_SOURCES', '')
     if verilog_sources:
-        # Replace /code/ with actual base_dir
-        verilog_sources = verilog_sources.replace('/code/', f'{os.path.abspath(base_dir)}/')
+        # Use the utility function for path normalization
+        verilog_sources = normalize_dataset_path(verilog_sources, base_dir)
         env['VERILOG_SOURCES'] = verilog_sources
     
     # Set PYTHONPATH to include src directory
@@ -132,7 +166,7 @@ def run_test_direct(base_dir, test_id):
             cwd=os.path.join(base_dir, 'rundir'),
             capture_output=True,
             text=True,
-            timeout=300  # 5 minute timeout
+            timeout=timeout  # Use configurable timeout
         )
         
         execution_time = time.time() - start_time
@@ -187,6 +221,8 @@ Examples:
                         help='Run specific test case by ID')
     parser.add_argument('-p', '--prefix', default='work_direct',
                         help='Output directory prefix (default: work_direct)')
+    parser.add_argument('-t', '--timeout', type=int, default=DEFAULT_TIMEOUT,
+                        help=f'Timeout per test in seconds (default: {DEFAULT_TIMEOUT})')
     
     args = parser.parse_args()
     
@@ -261,7 +297,7 @@ Examples:
         extract_test_files(data, test_dir)
         
         # Run test
-        success, log, execution_time = run_test_direct(test_dir, test_id)
+        success, log, execution_time = run_test_direct(test_dir, test_id, timeout=args.timeout)
         
         # Record result
         results[test_id] = {

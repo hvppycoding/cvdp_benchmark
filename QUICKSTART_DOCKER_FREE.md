@@ -11,6 +11,7 @@ source venv/bin/activate
 
 # 필수 패키지 설치
 pip install -r requirements.txt
+pip install -r requirements-direct.txt  # Docker-free 실행에 필요한 추가 패키지
 
 # Verilog 시뮬레이터 설치 (Ubuntu/Debian)
 sudo apt-get update
@@ -98,6 +99,7 @@ source venv/bin/activate
 
 # Install required packages
 pip install -r requirements.txt
+pip install -r requirements-direct.txt  # Additional packages for Docker-free execution
 
 # Install Verilog simulator (Ubuntu/Debian)
 sudo apt-get update
