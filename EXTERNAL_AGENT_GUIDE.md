@@ -21,6 +21,358 @@
 4. 평가만 실행 (CVDP 프레임워크 사용)
 ```
 
+---
+
+## 오프라인 환경 준비 가이드 (Offline Environment Setup)
+
+### 개요
+
+오프라인 환경(인터넷 연결이 제한적이지만 pip, npm은 사용 가능)에서 External Agent를 사용하려면, 필요한 모든 파일을 미리 준비하여 오프라인 환경으로 옮겨야 합니다.
+
+### 1단계: 온라인 환경에서 파일 준비
+
+#### 1.1 저장소 클론 및 데이터셋 다운로드
+
+```bash
+# CVDP 벤치마크 저장소 클론
+git clone https://github.com/nvidia-tcad/cvdp_benchmark.git
+cd cvdp_benchmark
+
+# dataset.jsonl 다운로드 (Hugging Face에서)
+# 방법 1: 웹 브라우저로 다운로드
+# https://huggingface.co/datasets/nvidia/cvdp-benchmark-dataset
+
+# 방법 2: huggingface-cli 사용
+pip install huggingface-hub
+huggingface-cli download nvidia/cvdp-benchmark-dataset --repo-type dataset --local-dir ./dataset
+
+# 필요한 dataset.jsonl 파일을 프로젝트 루트로 복사
+cp dataset/cvdp_v1.0.1_nonagentic_code_generation_no_commercial.jsonl ./dataset.jsonl
+```
+
+#### 1.2 Python 의존성 다운로드
+
+```bash
+# 가상환경 생성 (권장)
+python3 -m venv venv_online
+source venv_online/bin/activate  # Windows: venv_online\Scripts\activate
+
+# pip 업그레이드
+pip install --upgrade pip
+
+# 의존성 다운로드 (설치하지 않고 다운로드만)
+pip download -r requirements.txt -d ./offline_packages
+
+# Docker-free 실행을 위한 추가 패키지 다운로드
+pip download -r requirements-direct.txt -d ./offline_packages
+
+# 중복 제거 및 정리
+# (선택사항: 필요시 수동으로 중복 파일 제거)
+```
+
+#### 1.3 시뮬레이터 및 도구 준비
+
+**Icarus Verilog (권장):**
+
+```bash
+# Ubuntu/Debian 패키지 다운로드
+mkdir -p offline_tools
+cd offline_tools
+
+# Icarus Verilog 패키지 다운로드
+apt-get download iverilog
+# 의존성 패키지도 함께 다운로드
+apt-cache depends iverilog | grep Depends | awk '{print $2}' | xargs apt-get download
+
+cd ..
+```
+
+**또는 소스에서 빌드용 tarball 다운로드:**
+
+```bash
+mkdir -p offline_tools
+cd offline_tools
+
+# Icarus Verilog 소스 다운로드
+wget https://github.com/steveicarus/iverilog/archive/refs/tags/v12_0.tar.gz -O iverilog-12.0.tar.gz
+
+cd ..
+```
+
+**NPM 패키지 (External Agent가 Node.js를 사용하는 경우):**
+
+```bash
+# Node.js 기반 External Agent를 사용하는 경우
+# 프로젝트에 package.json이 있다면
+
+mkdir -p offline_npm_packages
+cd your_agent_directory
+
+# package-lock.json 생성 (없는 경우)
+npm install
+
+# 오프라인 tarball 생성
+npm pack
+
+# 또는 npm 캐시를 통한 오프라인 패키지 준비
+npm install --prefer-offline
+# npm 캐시 디렉토리 복사 (~/.npm 또는 %AppData%/npm-cache)
+mkdir -p ../offline_npm_packages
+cp -r ~/.npm ../offline_npm_packages/npm-cache
+
+cd ..
+```
+
+#### 1.4 전체 패키지 압축
+
+```bash
+# 오프라인 전송을 위한 전체 패키지 생성
+cd ..
+tar -czf cvdp_offline_package.tar.gz cvdp_benchmark/
+```
+
+### 2단계: 오프라인 환경으로 파일 전송
+
+```bash
+# USB, 네트워크 드라이브 등을 통해 전송
+# cvdp_offline_package.tar.gz를 오프라인 환경으로 복사
+```
+
+### 3단계: 오프라인 환경에서 설치
+
+#### 3.1 패키지 압축 해제
+
+```bash
+# 오프라인 환경에서
+tar -xzf cvdp_offline_package.tar.gz
+cd cvdp_benchmark
+```
+
+#### 3.2 시뮬레이터 설치
+
+**방법 1: 다운로드한 .deb 패키지 설치 (Ubuntu/Debian):**
+
+```bash
+cd offline_tools
+sudo dpkg -i *.deb
+# 의존성 문제 해결 (필요시)
+sudo apt-get install -f
+
+cd ..
+```
+
+**방법 2: 소스에서 빌드:**
+
+```bash
+cd offline_tools
+tar -xzf iverilog-12.0.tar.gz
+cd iverilog-12_0
+./configure
+make
+sudo make install
+
+cd ../..
+```
+
+#### 3.3 Python 환경 설정
+
+```bash
+# 가상환경 생성
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 오프라인 패키지에서 의존성 설치
+pip install --no-index --find-links=./offline_packages -r requirements.txt
+pip install --no-index --find-links=./offline_packages -r requirements-direct.txt
+```
+
+**NPM 패키지 설치 (Node.js 기반 Agent 사용 시):**
+
+```bash
+# 방법 1: npm 캐시 사용
+cp -r offline_npm_packages/npm-cache ~/.npm
+
+cd your_agent_directory
+npm install --offline
+
+# 방법 2: 로컬 tarball 사용
+cd your_agent_directory
+npm install /path/to/your-agent-package.tgz
+
+cd ..
+```
+
+#### 3.4 환경 변수 설정
+
+```bash
+# .env 파일 생성
+cp .env.example .env
+
+# .env 파일 편집 (필요시)
+# 오프라인 환경에서는 LLM API 키 불필요 (answers 파일 사용)
+```
+
+### 4단계: 오프라인 환경에서 External Agent 실행
+
+오프라인 환경이 준비되면 아래의 "단계별 실행 방법"을 따라 진행하세요.
+
+**주요 참고사항:**
+- LLM API 호출은 사용하지 않으므로 인터넷 연결 불필요
+- External Agent의 실행 결과를 answers 파일로 저장
+- 평가만 로컬에서 실행 (`-a` 옵션 사용)
+
+### 체크리스트: 오프라인 환경 준비 완료 확인
+
+- [ ] CVDP 벤치마크 저장소 복사 완료
+- [ ] dataset.jsonl 파일 준비 완료
+- [ ] Python 의존성 패키지 (offline_packages) 준비 완료
+- [ ] Icarus Verilog 또는 Verilator 설치 완료
+- [ ] Python 가상환경 생성 및 패키지 설치 완료
+- [ ] External Agent 프로그램 준비 완료 (있는 경우)
+
+### 문제 해결 (Offline Troubleshooting)
+
+**문제: pip 설치 시 "Could not find a version" 오류**
+```bash
+# 해결: wheel 파일이 offline_packages에 있는지 확인
+ls offline_packages/
+
+# 누락된 패키지가 있다면, 온라인 환경에서 다시 다운로드
+# pip download <package-name> -d ./offline_packages
+```
+
+**문제: Icarus Verilog 실행 시 "command not found"**
+```bash
+# 해결: PATH 확인
+which iverilog
+
+# 수동으로 PATH 추가 (필요시)
+export PATH=$PATH:/usr/local/bin
+```
+
+**문제: cocotb 실행 시 시뮬레이터를 찾지 못함**
+```bash
+# 해결: SIM 환경 변수 확인
+export SIM=icarus
+
+# 시뮬레이터가 PATH에 있는지 확인
+which iverilog
+```
+
+**문제: npm install 시 네트워크 오류**
+```bash
+# 해결: --offline 또는 --prefer-offline 플래그 사용
+npm install --offline
+
+# 또는 npm 레지스트리를 로컬로 설정
+npm config set registry http://localhost:4873
+```
+
+### 자동화 스크립트 예시: 오프라인 패키지 준비
+
+온라인 환경에서 실행하여 모든 필요한 파일을 한 번에 준비하는 스크립트:
+
+```bash
+#!/bin/bash
+# prepare_offline_package.sh
+# 온라인 환경에서 실행하여 오프라인 패키지를 준비하는 스크립트
+
+set -e
+
+echo "=== CVDP 오프라인 패키지 준비 시작 ==="
+
+# 1. 저장소가 이미 클론되어 있다고 가정
+REPO_DIR=$(pwd)
+PACKAGE_DIR="${REPO_DIR}_offline_prepared"
+
+echo "작업 디렉토리: $PACKAGE_DIR"
+mkdir -p "$PACKAGE_DIR"
+
+# 2. 저장소 복사
+echo "[1/6] 저장소 복사..."
+rsync -av --exclude='.git' --exclude='venv*' --exclude='work*' \
+  "$REPO_DIR/" "$PACKAGE_DIR/cvdp_benchmark/"
+
+cd "$PACKAGE_DIR/cvdp_benchmark"
+
+# 3. Python 패키지 다운로드
+echo "[2/6] Python 패키지 다운로드..."
+mkdir -p offline_packages
+pip download -r requirements.txt -d ./offline_packages
+pip download -r requirements-direct.txt -d ./offline_packages
+
+# 4. 데이터셋 다운로드 (huggingface-cli 필요)
+echo "[3/6] 데이터셋 다운로드..."
+if command -v huggingface-cli &> /dev/null; then
+    huggingface-cli download nvidia/cvdp-benchmark-dataset \
+        --repo-type dataset --local-dir ./dataset
+    cp dataset/cvdp_v1.0.1_nonagentic_code_generation_no_commercial.jsonl \
+        ./dataset.jsonl
+else
+    echo "경고: huggingface-cli가 설치되지 않았습니다."
+    echo "수동으로 https://huggingface.co/datasets/nvidia/cvdp-benchmark-dataset 에서 다운로드하세요."
+fi
+
+# 5. Icarus Verilog 소스 다운로드
+echo "[4/6] Icarus Verilog 다운로드..."
+mkdir -p offline_tools
+cd offline_tools
+if command -v wget &> /dev/null; then
+    wget https://github.com/steveicarus/iverilog/archive/refs/tags/v12_0.tar.gz \
+        -O iverilog-12.0.tar.gz
+else
+    echo "경고: wget이 설치되지 않았습니다."
+    echo "수동으로 Icarus Verilog를 다운로드하세요."
+fi
+cd ..
+
+# 6. README 파일 생성
+echo "[5/6] 오프라인 설치 가이드 생성..."
+cat > OFFLINE_INSTALL.md << 'EOF'
+# 오프라인 설치 가이드
+
+## 1. 시뮬레이터 설치
+```bash
+cd offline_tools
+tar -xzf iverilog-12.0.tar.gz
+cd iverilog-12_0
+./configure
+make
+sudo make install
+cd ../..
+```
+
+## 2. Python 환경 설정
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install --no-index --find-links=./offline_packages -r requirements.txt
+pip install --no-index --find-links=./offline_packages -r requirements-direct.txt
+```
+
+## 3. 실행
+EXTERNAL_AGENT_GUIDE.md 문서의 "단계별 실행 방법"을 참조하세요.
+EOF
+
+# 7. 압축
+echo "[6/6] 패키지 압축..."
+cd "$PACKAGE_DIR"
+tar -czf cvdp_offline_package.tar.gz cvdp_benchmark/
+
+echo ""
+echo "=== 완료! ==="
+echo "생성된 파일: $PACKAGE_DIR/cvdp_offline_package.tar.gz"
+echo "이 파일을 오프라인 환경으로 전송하세요."
+```
+
+사용 방법:
+```bash
+chmod +x prepare_offline_package.sh
+./prepare_offline_package.sh
+```
+
+---
+
 ### 단계별 실행 방법
 
 #### 1단계: 환경 셋업 (파일 추출)
@@ -383,6 +735,357 @@ This guide explains how to evaluate CVDP benchmarks using an **external Agent ap
    ↓
 4. Run evaluation only (using CVDP framework)
 ```
+
+---
+
+## Offline Environment Preparation Guide
+
+### Overview
+
+To use External Agents in an offline environment (limited internet access but pip/npm available), you need to prepare and transfer all necessary files beforehand.
+
+### Step 1: Prepare Files in Online Environment
+
+#### 1.1 Clone Repository and Download Dataset
+
+```bash
+# Clone CVDP benchmark repository
+git clone https://github.com/nvidia-tcad/cvdp_benchmark.git
+cd cvdp_benchmark
+
+# Download dataset.jsonl from Hugging Face
+# Method 1: Download via web browser
+# https://huggingface.co/datasets/nvidia/cvdp-benchmark-dataset
+
+# Method 2: Use huggingface-cli
+pip install huggingface-hub
+huggingface-cli download nvidia/cvdp-benchmark-dataset --repo-type dataset --local-dir ./dataset
+
+# Copy needed dataset.jsonl to project root
+cp dataset/cvdp_v1.0.1_nonagentic_code_generation_no_commercial.jsonl ./dataset.jsonl
+```
+
+#### 1.2 Download Python Dependencies
+
+```bash
+# Create virtual environment (recommended)
+python3 -m venv venv_online
+source venv_online/bin/activate  # Windows: venv_online\Scripts\activate
+
+# Upgrade pip
+pip install --upgrade pip
+
+# Download dependencies (download only, don't install)
+pip download -r requirements.txt -d ./offline_packages
+
+# Download additional packages for Docker-free execution
+pip download -r requirements-direct.txt -d ./offline_packages
+
+# Remove duplicates and clean up (optional)
+```
+
+#### 1.3 Prepare Simulator and Tools
+
+**Icarus Verilog (Recommended):**
+
+```bash
+# Download Ubuntu/Debian packages
+mkdir -p offline_tools
+cd offline_tools
+
+# Download Icarus Verilog package
+apt-get download iverilog
+# Download dependency packages
+apt-cache depends iverilog | grep Depends | awk '{print $2}' | xargs apt-get download
+
+cd ..
+```
+
+**Or download tarball for building from source:**
+
+```bash
+mkdir -p offline_tools
+cd offline_tools
+
+# Download Icarus Verilog source
+wget https://github.com/steveicarus/iverilog/archive/refs/tags/v12_0.tar.gz -O iverilog-12.0.tar.gz
+
+cd ..
+```
+
+**NPM Packages (if External Agent uses Node.js):**
+
+```bash
+# If using Node.js-based External Agent
+# If your project has package.json
+
+mkdir -p offline_npm_packages
+cd your_agent_directory
+
+# Generate package-lock.json (if not exists)
+npm install
+
+# Create offline tarball
+npm pack
+
+# Or prepare offline packages via npm cache
+npm install --prefer-offline
+# Copy npm cache directory (~/.npm or %AppData%/npm-cache)
+mkdir -p ../offline_npm_packages
+cp -r ~/.npm ../offline_npm_packages/npm-cache
+
+cd ..
+```
+
+#### 1.4 Create Complete Package
+
+```bash
+# Create package for offline transfer
+cd ..
+tar -czf cvdp_offline_package.tar.gz cvdp_benchmark/
+```
+
+### Step 2: Transfer Files to Offline Environment
+
+```bash
+# Transfer via USB, network drive, etc.
+# Copy cvdp_offline_package.tar.gz to offline environment
+```
+
+### Step 3: Installation in Offline Environment
+
+#### 3.1 Extract Package
+
+```bash
+# In offline environment
+tar -xzf cvdp_offline_package.tar.gz
+cd cvdp_benchmark
+```
+
+#### 3.2 Install Simulator
+
+**Method 1: Install downloaded .deb packages (Ubuntu/Debian):**
+
+```bash
+cd offline_tools
+sudo dpkg -i *.deb
+# Fix dependencies if needed
+sudo apt-get install -f
+
+cd ..
+```
+
+**Method 2: Build from source:**
+
+```bash
+cd offline_tools
+tar -xzf iverilog-12.0.tar.gz
+cd iverilog-12_0
+./configure
+make
+sudo make install
+
+cd ../..
+```
+
+#### 3.3 Setup Python Environment
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies from offline packages
+pip install --no-index --find-links=./offline_packages -r requirements.txt
+pip install --no-index --find-links=./offline_packages -r requirements-direct.txt
+```
+
+**Install NPM Packages (if using Node.js-based Agent):**
+
+```bash
+# Method 1: Use npm cache
+cp -r offline_npm_packages/npm-cache ~/.npm
+
+cd your_agent_directory
+npm install --offline
+
+# Method 2: Use local tarball
+cd your_agent_directory
+npm install /path/to/your-agent-package.tgz
+
+cd ..
+```
+
+#### 3.4 Configure Environment Variables
+
+```bash
+# Create .env file
+cp .env.example .env
+
+# Edit .env file if needed
+# LLM API keys not required in offline environment (using answers file)
+```
+
+### Step 4: Run External Agent in Offline Environment
+
+Once the offline environment is ready, follow the "Step-by-Step Guide" below.
+
+**Key Notes:**
+- No internet connection required (no LLM API calls)
+- Save External Agent execution results as answers file
+- Run evaluation locally only (using `-a` option)
+
+### Checklist: Verify Offline Environment Setup
+
+- [ ] CVDP benchmark repository copied
+- [ ] dataset.jsonl file prepared
+- [ ] Python dependency packages (offline_packages) prepared
+- [ ] Icarus Verilog or Verilator installed
+- [ ] Python virtual environment created and packages installed
+- [ ] External Agent program prepared (if applicable)
+
+### Troubleshooting (Offline)
+
+**Issue: "Could not find a version" error during pip install**
+```bash
+# Solution: Check if wheel files are in offline_packages
+ls offline_packages/
+
+# If packages are missing, re-download in online environment
+# pip download <package-name> -d ./offline_packages
+```
+
+**Issue: "command not found" when running Icarus Verilog**
+```bash
+# Solution: Check PATH
+which iverilog
+
+# Manually add to PATH if needed
+export PATH=$PATH:/usr/local/bin
+```
+
+**Issue: cocotb cannot find simulator**
+```bash
+# Solution: Check SIM environment variable
+export SIM=icarus
+
+# Verify simulator is in PATH
+which iverilog
+```
+
+**Issue: Network error during npm install**
+```bash
+# Solution: Use --offline or --prefer-offline flag
+npm install --offline
+
+# Or set npm registry to local
+npm config set registry http://localhost:4873
+```
+
+### Automated Script Example: Offline Package Preparation
+
+Script to run in online environment to prepare all necessary files at once:
+
+```bash
+#!/bin/bash
+# prepare_offline_package.sh
+# Run in online environment to prepare offline package
+
+set -e
+
+echo "=== CVDP Offline Package Preparation Started ==="
+
+# 1. Assume repository is already cloned
+REPO_DIR=$(pwd)
+PACKAGE_DIR="${REPO_DIR}_offline_prepared"
+
+echo "Working directory: $PACKAGE_DIR"
+mkdir -p "$PACKAGE_DIR"
+
+# 2. Copy repository
+echo "[1/6] Copying repository..."
+rsync -av --exclude='.git' --exclude='venv*' --exclude='work*' \
+  "$REPO_DIR/" "$PACKAGE_DIR/cvdp_benchmark/"
+
+cd "$PACKAGE_DIR/cvdp_benchmark"
+
+# 3. Download Python packages
+echo "[2/6] Downloading Python packages..."
+mkdir -p offline_packages
+pip download -r requirements.txt -d ./offline_packages
+pip download -r requirements-direct.txt -d ./offline_packages
+
+# 4. Download dataset (requires huggingface-cli)
+echo "[3/6] Downloading dataset..."
+if command -v huggingface-cli &> /dev/null; then
+    huggingface-cli download nvidia/cvdp-benchmark-dataset \
+        --repo-type dataset --local-dir ./dataset
+    cp dataset/cvdp_v1.0.1_nonagentic_code_generation_no_commercial.jsonl \
+        ./dataset.jsonl
+else
+    echo "Warning: huggingface-cli not installed."
+    echo "Please download manually from https://huggingface.co/datasets/nvidia/cvdp-benchmark-dataset"
+fi
+
+# 5. Download Icarus Verilog source
+echo "[4/6] Downloading Icarus Verilog..."
+mkdir -p offline_tools
+cd offline_tools
+if command -v wget &> /dev/null; then
+    wget https://github.com/steveicarus/iverilog/archive/refs/tags/v12_0.tar.gz \
+        -O iverilog-12.0.tar.gz
+else
+    echo "Warning: wget not installed."
+    echo "Please download Icarus Verilog manually."
+fi
+cd ..
+
+# 6. Create README
+echo "[5/6] Creating offline installation guide..."
+cat > OFFLINE_INSTALL.md << 'EOF'
+# Offline Installation Guide
+
+## 1. Install Simulator
+```bash
+cd offline_tools
+tar -xzf iverilog-12.0.tar.gz
+cd iverilog-12_0
+./configure
+make
+sudo make install
+cd ../..
+```
+
+## 2. Setup Python Environment
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install --no-index --find-links=./offline_packages -r requirements.txt
+pip install --no-index --find-links=./offline_packages -r requirements-direct.txt
+```
+
+## 3. Run
+See "Step-by-Step Guide" section in EXTERNAL_AGENT_GUIDE.md
+EOF
+
+# 7. Compress
+echo "[6/6] Compressing package..."
+cd "$PACKAGE_DIR"
+tar -czf cvdp_offline_package.tar.gz cvdp_benchmark/
+
+echo ""
+echo "=== Complete! ==="
+echo "Created file: $PACKAGE_DIR/cvdp_offline_package.tar.gz"
+echo "Transfer this file to your offline environment."
+```
+
+Usage:
+```bash
+chmod +x prepare_offline_package.sh
+./prepare_offline_package.sh
+```
+
+---
 
 ### Step-by-Step Guide
 
