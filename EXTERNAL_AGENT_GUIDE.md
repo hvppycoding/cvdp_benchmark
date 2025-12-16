@@ -94,7 +94,7 @@ mkdir -p offline_tools
 cd offline_tools
 
 # Icarus Verilog 소스 다운로드
-wget https://github.com/steveicarus/iverilog/archive/refs/tags/v12_0.tar.gz -O iverilog-12.0.tar.gz
+wget https://github.com/steveicarus/iverilog/archive/refs/tags/v12_0.tar.gz -O iverilog-12_0.tar.gz
 
 cd ..
 ```
@@ -165,7 +165,7 @@ cd ..
 
 ```bash
 cd offline_tools
-tar -xzf iverilog-12.0.tar.gz
+tar -xzf iverilog-12_0.tar.gz
 cd iverilog-12_0
 ./configure
 make
@@ -319,7 +319,7 @@ mkdir -p offline_tools
 cd offline_tools
 if command -v wget &> /dev/null; then
     wget https://github.com/steveicarus/iverilog/archive/refs/tags/v12_0.tar.gz \
-        -O iverilog-12.0.tar.gz
+        -O iverilog-12_0.tar.gz
 else
     echo "경고: wget이 설치되지 않았습니다."
     echo "수동으로 Icarus Verilog를 다운로드하세요."
@@ -334,7 +334,7 @@ cat > OFFLINE_INSTALL.md << 'EOF'
 ## 1. 시뮬레이터 설치
 ```bash
 cd offline_tools
-tar -xzf iverilog-12.0.tar.gz
+tar -xzf iverilog-12_0.tar.gz
 cd iverilog-12_0
 ./configure
 make
@@ -808,7 +808,7 @@ mkdir -p offline_tools
 cd offline_tools
 
 # Download Icarus Verilog source
-wget https://github.com/steveicarus/iverilog/archive/refs/tags/v12_0.tar.gz -O iverilog-12.0.tar.gz
+wget https://github.com/steveicarus/iverilog/archive/refs/tags/v12_0.tar.gz -O iverilog-12_0.tar.gz
 
 cd ..
 ```
@@ -879,7 +879,7 @@ cd ..
 
 ```bash
 cd offline_tools
-tar -xzf iverilog-12.0.tar.gz
+tar -xzf iverilog-12_0.tar.gz
 cd iverilog-12_0
 ./configure
 make
@@ -1033,7 +1033,7 @@ mkdir -p offline_tools
 cd offline_tools
 if command -v wget &> /dev/null; then
     wget https://github.com/steveicarus/iverilog/archive/refs/tags/v12_0.tar.gz \
-        -O iverilog-12.0.tar.gz
+        -O iverilog-12_0.tar.gz
 else
     echo "Warning: wget not installed."
     echo "Please download Icarus Verilog manually."
@@ -1048,7 +1048,7 @@ cat > OFFLINE_INSTALL.md << 'EOF'
 ## 1. Install Simulator
 ```bash
 cd offline_tools
-tar -xzf iverilog-12.0.tar.gz
+tar -xzf iverilog-12_0.tar.gz
 cd iverilog-12_0
 ./configure
 make
