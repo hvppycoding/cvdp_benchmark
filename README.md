@@ -176,6 +176,8 @@ cd work_debug/cvdp_agentic_fixed_arbiter_0001/harness/1/
 **Resources:**
 - **Full Dataset**: Download from [🤗 nvidia/cvdp-benchmark-dataset](https://huggingface.co/datasets/nvidia/cvdp-benchmark-dataset)
 - **External Agent Evaluation**: See [External Agent Guide](EXTERNAL_AGENT_GUIDE.md) for using your own Agent application
+  - **Offline Environment**: Includes instructions for preparing and running in offline environments (pip/npm available)
+- **Offline Quick Reference**: See [Offline Quick Reference](OFFLINE_QUICK_REFERENCE.md) for offline setup cheat sheet
 - **Docker-Free Quick Start**: See [Quick Start Guide](QUICKSTART_DOCKER_FREE.md) for running tests without Docker (Korean/English)
 - **Docker-Free Execution**: See [Docker-Free Execution Guide](DOCKER_FREE_EXECUTION.md) for detailed technical documentation
 - **Local Inference**: See [Local Inference Guide](LOCAL_INFERENCE_GUIDE.md) for using local models instead of API calls
@@ -192,8 +194,11 @@ For comprehensive documentation including detailed installation instructions, co
 - **[README_NON_AGENTIC.md](README_NON_AGENTIC.md)** - Complete guide for non-agentic evaluation workflow
 - **[README_AGENTIC.md](README_AGENTIC.md)** - Complete guide for Docker agent evaluation workflow
 - **[EXTERNAL_AGENT_GUIDE.md](EXTERNAL_AGENT_GUIDE.md)** - Guide for using external Agent applications (Korean/English)
+  - Includes comprehensive offline environment setup instructions
+- **[OFFLINE_QUICK_REFERENCE.md](OFFLINE_QUICK_REFERENCE.md)** - Quick reference card for offline setup and execution
 - **[QUICKSTART_DOCKER_FREE.md](QUICKSTART_DOCKER_FREE.md)** - Quick start guide for Docker-free execution (Korean/English)
 - **[DOCKER_FREE_EXECUTION.md](DOCKER_FREE_EXECUTION.md)** - Detailed guide for running tests without Docker (Korean/English)
 - **[LOCAL_INFERENCE_GUIDE.md](LOCAL_INFERENCE_GUIDE.md)** - Guide for using local models instead of API-based models
 - **[examples/README.md](examples/README.md)** - Custom model and agent development for end users
 - **[README_DEVELOPER.md](README_DEVELOPER.md)** - Internal development and architecture documentation
+- **[tools/README.md](tools/README.md)** - Utility scripts documentation
